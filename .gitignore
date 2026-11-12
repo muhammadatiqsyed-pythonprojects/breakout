@@ -218,3 +218,16 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Extra: secrets (good habit)
+*.key
+*.pem
+secrets.*
+
+# Extra: editor / OS
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Extra: zip files (web and desktop builds)
+*.zip
