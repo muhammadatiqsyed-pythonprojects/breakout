@@ -15,8 +15,7 @@ PADDLE_HEIGHT = 20
 # ball values
 BALL_COLOR = "pink"
 BALL_RADIUS = 12
-BALL_SPEED_X = 200  # pixels per second
-BALL_SPEED_Y = 200
+BALL_SPEED = 300  # pixels per second, in any direction
 
 
 class Paddle:
@@ -38,11 +37,11 @@ class Paddle:
 
 
 class Ball:
-    def __init__(self, ball_color, ball_radius, ball_speed_x, ball_speed_y):
+    def __init__(self, ball_color, ball_radius, ball_speed):
         self.rect = pygame.FRect(0, 0, ball_radius * 2, ball_radius * 2)
         self.rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
-        self.ball_speed_x = ball_speed_x
-        self.ball_speed_y = ball_speed_y
+        # direction up and to the right, length 1, then multiplied by the speed
+        self.velocity = pygame.Vector2(1, -1).normalize() * ball_speed
         self.ball_color = ball_color
         self.ball_radius = ball_radius
 
@@ -50,23 +49,28 @@ class Ball:
         pygame.draw.circle(surface, self.ball_color, self.rect.center, self.ball_radius)
 
     def update(self, dt, paddle_rect):
-        self.rect.x += self.ball_speed_x * dt
-        self.rect.y += self.ball_speed_y * dt
+        # move
+        self.rect.x += self.velocity.x * dt
+        self.rect.y += self.velocity.y * dt
+
+        # walls
         if self.rect.left <= 0:
             self.rect.left = 0
-            self.ball_speed_x = abs(self.ball_speed_x)
+            self.velocity.x = abs(self.velocity.x)
         if self.rect.right >= WINDOW_WIDTH:
             self.rect.right = WINDOW_WIDTH
-            self.ball_speed_x = -abs(self.ball_speed_x)
+            self.velocity.x = -abs(self.velocity.x)
         if self.rect.top <= 0:
             self.rect.top = 0
-            self.ball_speed_y = abs(self.ball_speed_y)
+            self.velocity.y = abs(self.velocity.y)
         if self.rect.bottom >= WINDOW_HEIGHT:
             self.rect.bottom = WINDOW_HEIGHT
-            self.ball_speed_y = -abs(self.ball_speed_y)
-        if self.rect.colliderect(paddle_rect) and self.ball_speed_y > 0:
+            self.velocity.y = -abs(self.velocity.y)
+
+        # paddle
+        if self.rect.colliderect(paddle_rect) and self.velocity.y > 0:
             self.rect.bottom = paddle_rect.top
-            self.ball_speed_y = -abs(self.ball_speed_y)
+            self.velocity.y = -abs(self.velocity.y)
 
 
 async def main():
@@ -86,7 +90,7 @@ async def main():
     paddle = Paddle(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_SPEED)
 
     # ball class object
-    ball = Ball(BALL_COLOR, BALL_RADIUS, BALL_SPEED_X, BALL_SPEED_Y)
+    ball = Ball(BALL_COLOR, BALL_RADIUS, BALL_SPEED)
 
     # game loop
     while running:
