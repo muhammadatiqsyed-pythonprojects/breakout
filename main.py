@@ -17,6 +17,19 @@ BALL_COLOR = "pink"
 BALL_RADIUS = 12
 BALL_SPEED = 300  # pixels per second, in any direction
 
+# brick values
+BRICK_ROWS = 6
+BRICK_COLS = 10
+BRICK_WIDTH = 50
+BRICK_HEIGHT = 30
+BRICK_GAP = 5
+BRICK_TOP_MARGIN = 60
+# brick_lef_margin (That is: window width minus the total width of all bricks and gaps, divided by 2)
+BRICK_LEFT_MARGIN = (
+    WINDOW_WIDTH - (BRICK_COLS * BRICK_WIDTH + (BRICK_COLS - 1) * BRICK_GAP)
+) / 2
+BRICK_COLOR = "brown"
+
 
 class Paddle:
     def __init__(self, paddle_width, paddle_height, paddle_speed):
@@ -83,6 +96,15 @@ class Ball:
             self.velocity = direction.normalize() * self.speed
 
 
+class Brick:
+    def __init__(self, x, y, brick_color, brick_width, brick_height):
+        self.rect = pygame.FRect(x, y, brick_width, brick_height)
+        self.brick_color = brick_color
+
+    def draw(self, surface):
+        pygame.draw.rect(surface, self.brick_color, self.rect)
+
+
 async def main():
     # ---------------------------------------SET UP---------------------------------------
     pygame.init()
@@ -95,6 +117,15 @@ async def main():
 
     # variables
     running = True
+    brick_list = []
+    # appending bricks to the list
+    # col moves each brick right by one brick width plus one gap.
+    # row moves each brick down by one brick height plus one gap.
+    for row in range(BRICK_ROWS):
+        for col in range(BRICK_COLS):
+            x = BRICK_LEFT_MARGIN + col * (BRICK_WIDTH + BRICK_GAP)
+            y = BRICK_TOP_MARGIN + row * (BRICK_HEIGHT + BRICK_GAP)
+            brick_list.append(Brick(x, y, BRICK_COLOR, BRICK_WIDTH, BRICK_HEIGHT))
 
     # paddle class object
     paddle = Paddle(PADDLE_WIDTH, PADDLE_HEIGHT, PADDLE_SPEED)
@@ -116,12 +147,20 @@ async def main():
 
         ball.update(dt, paddle.rect)
 
+        # removing bricks from the list
+        for brick in brick_list[:]:  # [:] loops over a copy of the list
+            if brick.rect.colliderect(ball.rect):
+                brick_list.remove(brick)
+
         # ---------------------------------DRAW---------------------------------------
         window.fill("white")
 
         paddle.draw(window, PADDLE_COLOR)
 
         ball.draw(window)
+
+        for brick in brick_list:
+            brick.draw(window)
 
         pygame.display.flip()
         await asyncio.sleep(0)
