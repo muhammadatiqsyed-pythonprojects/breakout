@@ -1,4 +1,5 @@
 import asyncio
+import os
 
 import pygame
 
@@ -38,6 +39,20 @@ STARTING_LIVES = 3
 POINTS_PER_BRICK = 5  # bottom row; each row higher is worth this much more
 LIFE_LOST_PAUSE = 2  # seconds the game waits after losing a life
 
+# assets (every file is optional: if one is missing, a shape or silence is used)
+ASSET_DIR = "assets"
+SOUND_VOLUME = 0.5
+SOUND_FILES = {
+    "bounce": "bounce.ogg",  # ball hits a wall or the paddle
+    "brick": "brick.ogg",  # ball breaks a brick
+    "life_lost": "life_lost.ogg",
+    "game_over": "game_over.ogg",
+    "win": "win.ogg",
+}
+BACKGROUND_FILE = "background.png"
+PADDLE_FILE = "paddle.png"
+BALL_FILE = "ball.png"
+
 # text
 TEXT_COLOR = "black"
 CONTROLS_TEXT = [
@@ -65,8 +80,11 @@ class Paddle:
             self.rect.x += self.paddle_speed * dt
         self.rect.clamp_ip(surface.get_rect())
 
-    def draw(self, surface, paddle_color):
-        pygame.draw.rect(surface, paddle_color, self.rect)
+    def draw(self, surface, paddle_color, image=None):
+        if image:
+            surface.blit(image, (int(self.rect.x), int(self.rect.y)))
+        else:
+            pygame.draw.rect(surface, paddle_color, self.rect)
 
 
 class Ball:
@@ -83,10 +101,18 @@ class Ball:
         self.speed = self.base_speed
         self.velocity = pygame.Vector2(1, -1).normalize() * self.speed
 
-    def draw(self, surface):
-        pygame.draw.circle(surface, self.ball_color, self.rect.center, self.ball_radius)
+    def draw(self, surface, image=None):
+        if image:
+            surface.blit(image, image.get_rect(center=self.rect.center))
+        else:
+            pygame.draw.circle(
+                surface, self.ball_color, self.rect.center, self.ball_radius
+            )
 
     def update(self, dt, paddle_rect):
+        # returns "bounce" if the ball hit a wall or the paddle, otherwise None
+        hit = None
+
         # move
         self.rect.x += self.velocity.x * dt
         self.rect.y += self.velocity.y * dt
@@ -95,12 +121,15 @@ class Ball:
         if self.rect.left <= 0:
             self.rect.left = 0
             self.velocity.x = abs(self.velocity.x)
+            hit = "bounce"
         if self.rect.right >= WINDOW_WIDTH:
             self.rect.right = WINDOW_WIDTH
             self.velocity.x = -abs(self.velocity.x)
+            hit = "bounce"
         if self.rect.top <= 0:
             self.rect.top = 0
             self.velocity.y = abs(self.velocity.y)
+            hit = "bounce"
 
         # paddle
         if (
@@ -117,6 +146,9 @@ class Ball:
             # new direction: sideways by the offset, always upward
             direction = pygame.Vector2(offset * 0.8, -1)
             self.velocity = direction.normalize() * self.speed
+            hit = "bounce"
+
+        return hit
 
     def bounce_off(self, brick_rect):
         # how deep the ball has sunk into the brick from each side
@@ -184,6 +216,30 @@ def build_bricks():
     return bricks
 
 
+def load_sound(filename):
+    # returns a Sound, or None if the file is missing or audio is unavailable
+    try:
+        sound = pygame.mixer.Sound(os.path.join(ASSET_DIR, "sounds", filename))
+        sound.set_volume(SOUND_VOLUME)
+        return sound
+    except (FileNotFoundError, pygame.error):
+        return None
+
+
+def play(sound):
+    if sound:
+        sound.play()
+
+
+def load_image(filename, size):
+    # returns a scaled image, or None if the file is missing
+    try:
+        image = pygame.image.load(os.path.join(ASSET_DIR, "images", filename))
+        return pygame.transform.smoothscale(image.convert_alpha(), size)
+    except (FileNotFoundError, pygame.error):
+        return None
+
+
 def draw_text(surface, text, font, color, **position):
     # position is like center=(400, 100) or topleft=(10, 10)
     image = font.render(text, True, color)
@@ -204,6 +260,12 @@ async def main():
     title_font = pygame.font.Font(None, 90)
     text_font = pygame.font.Font(None, 44)
     small_font = pygame.font.Font(None, 30)
+
+    # sounds and images (None means "not found": shapes and silence are used)
+    sounds = {name: load_sound(file) for name, file in SOUND_FILES.items()}
+    background_image = load_image(BACKGROUND_FILE, (WINDOW_WIDTH, WINDOW_HEIGHT))
+    paddle_image = load_image(PADDLE_FILE, (PADDLE_WIDTH, PADDLE_HEIGHT))
+    ball_image = load_image(BALL_FILE, (BALL_RADIUS * 2, BALL_RADIUS * 2))
 
     # variables
     running = True
@@ -271,7 +333,8 @@ async def main():
         # ----------------------------------UPDATE-------------------------------------
         if game_state == "playing":
             paddle.update(dt, window)
-            ball.update(dt, paddle.rect)
+            if ball.update(dt, paddle.rect) == "bounce":
+                play(sounds["bounce"])
 
             # bounce off and remove the first brick the ball touches
             for brick in brick_list[:]:  # [:] loops over a copy of the list
@@ -279,6 +342,7 @@ async def main():
                     ball.bounce_off(brick.rect)
                     brick_list.remove(brick)
                     score += brick.points
+                    play(sounds["brick"])
                     break
 
             # ball fell below the window: lose a life and reset the ball
@@ -288,10 +352,12 @@ async def main():
                 if lives > 0:
                     game_state = "life_lost"
                     life_lost_timer = LIFE_LOST_PAUSE
+                    play(sounds["life_lost"])
 
             # end of the game
             if lives <= 0 or not brick_list:
                 game_state = "gameover" if lives <= 0 else "win"
+                play(sounds["game_over"] if lives <= 0 else sounds["win"])
                 new_high = score > high_score
                 if new_high:
                     high_score = score
@@ -302,7 +368,10 @@ async def main():
                 game_state = "playing"
 
         # ---------------------------------DRAW---------------------------------------
-        window.fill("white")
+        if background_image:
+            window.blit(background_image, (0, 0))
+        else:
+            window.fill("white")
         centre_x = WINDOW_WIDTH // 2
 
         if game_state == "menu":
@@ -322,8 +391,8 @@ async def main():
         elif game_state in ("playing", "paused", "life_lost"):
             for brick in brick_list:
                 brick.draw(window)
-            paddle.draw(window, PADDLE_COLOR)
-            ball.draw(window)
+            paddle.draw(window, PADDLE_COLOR, paddle_image)
+            ball.draw(window, ball_image)
 
             # HUD
             draw_text(
