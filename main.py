@@ -58,7 +58,7 @@ TEXT_COLOR = "black"
 CONTROLS_TEXT = [
     "Left / Right or A / D : move paddle",
     "Mouse or touch : move paddle",
-    "P : pause",
+    "P or Pause button : pause",
     "R : restart (paused or game over)",
     "Space or Enter : start",
 ]
@@ -288,6 +288,11 @@ async def main():
     brick_list = build_bricks()
     start_button = Button((WINDOW_WIDTH // 2, 480), (220, 60), "Start", "darkblue")
     restart_button = Button((WINDOW_WIDTH // 2, 430), (220, 60), "Restart", "darkblue")
+    pause_button = Button((WINDOW_WIDTH // 2, 25), (100, 32), "Pause", "gray30")
+    resume_button = Button((WINDOW_WIDTH // 2, 410), (220, 60), "Resume", "darkblue")
+    paused_restart_button = Button(
+        (WINDOW_WIDTH // 2, 480), (220, 60), "Restart", "darkblue"
+    )
 
     # game loop
     while running:
@@ -312,8 +317,10 @@ async def main():
             elif game_state == "playing":
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                     game_state = "paused"
+                elif pause_button.is_clicked(event):
+                    game_state = "paused"
                 # the paddle follows the mouse or a finger (touch becomes mouse events)
-                if event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
+                elif event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
                     paddle.move_to(event.pos[0])
 
             elif game_state == "paused":
@@ -322,6 +329,10 @@ async def main():
                         game_state = "playing"
                     elif event.key == pygame.K_r:
                         restart = True
+                if resume_button.is_clicked(event):
+                    game_state = "playing"
+                elif paused_restart_button.is_clicked(event):
+                    restart = True
 
             elif game_state in ("gameover", "win"):
                 if restart_button.is_clicked(event):
@@ -414,19 +425,22 @@ async def main():
                 TEXT_COLOR,
                 topright=(WINDOW_WIDTH - 10, 10),
             )
-            draw_text(window, "P: pause", small_font, "gray30", midtop=(centre_x, 10))
+            if game_state == "playing":
+                pause_button.draw(window, small_font)
 
             if game_state == "paused":
                 draw_text(
-                    window, "PAUSED", title_font, "darkblue", center=(centre_x, 340)
+                    window, "PAUSED", title_font, "darkblue", center=(centre_x, 300)
                 )
                 draw_text(
                     window,
                     "P: resume    R: restart",
-                    text_font,
+                    small_font,
                     TEXT_COLOR,
-                    center=(centre_x, 400),
+                    center=(centre_x, 355),
                 )
+                resume_button.draw(window, text_font)
+                paused_restart_button.draw(window, text_font)
 
             if game_state == "life_lost":
                 if lives == 1:

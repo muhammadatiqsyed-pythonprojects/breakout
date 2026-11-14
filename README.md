@@ -19,6 +19,7 @@ A classic Breakout arcade game built with Python and pygame-ce. Bounce the ball 
 | R | Restart (when paused, or after game over or a win) |
 | Mouse click | Press the on-screen buttons |
 | Mouse or touch | Move the paddle |
+| P or the Pause button | Pause and resume |
 
 ## Run it on your computer
 
