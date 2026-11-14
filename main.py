@@ -57,6 +57,7 @@ BALL_FILE = "ball.png"
 TEXT_COLOR = "black"
 CONTROLS_TEXT = [
     "Left / Right or A / D : move paddle",
+    "Mouse or touch : move paddle",
     "P : pause",
     "R : restart (paused or game over)",
     "Space or Enter : start",
@@ -71,6 +72,11 @@ class Paddle:
 
     def reset(self):
         self.rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT - 50)
+
+    def move_to(self, x):
+        # centre the paddle on x, but keep it inside the window
+        self.rect.centerx = x
+        self.rect.clamp_ip(pygame.Rect(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT))
 
     def update(self, dt, surface):
         keys = pygame.key.get_pressed()
@@ -306,6 +312,9 @@ async def main():
             elif game_state == "playing":
                 if event.type == pygame.KEYDOWN and event.key == pygame.K_p:
                     game_state = "paused"
+                # the paddle follows the mouse or a finger (touch becomes mouse events)
+                if event.type in (pygame.MOUSEMOTION, pygame.MOUSEBUTTONDOWN):
+                    paddle.move_to(event.pos[0])
 
             elif game_state == "paused":
                 if event.type == pygame.KEYDOWN:
