@@ -69,7 +69,11 @@ class Ball:
             self.velocity.y = -abs(self.velocity.y)
 
         # paddle
-        if self.rect.colliderect(paddle_rect) and self.velocity.y > 0:
+        if (
+            self.rect.colliderect(paddle_rect)
+            and self.velocity.y > 0
+            and self.rect.centery < paddle_rect.centery
+        ):
             self.rect.bottom = paddle_rect.top
             # where did the ball hit? -1 = far left, 0 = centre, 1 = far right
             offset = (self.rect.centerx - paddle_rect.centerx) / (paddle_rect.width / 2)
