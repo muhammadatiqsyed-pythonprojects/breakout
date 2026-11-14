@@ -42,6 +42,7 @@ class Ball:
         self.rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
         # direction up and to the right, length 1, then multiplied by the speed
         self.velocity = pygame.Vector2(1, -1).normalize() * ball_speed
+        self.speed = ball_speed
         self.ball_color = ball_color
         self.ball_radius = ball_radius
 
@@ -70,7 +71,12 @@ class Ball:
         # paddle
         if self.rect.colliderect(paddle_rect) and self.velocity.y > 0:
             self.rect.bottom = paddle_rect.top
-            self.velocity.y = -abs(self.velocity.y)
+            # where did the ball hit? -1 = far left, 0 = centre, 1 = far right
+            offset = (self.rect.centerx - paddle_rect.centerx) / (paddle_rect.width / 2)
+            offset = max(-1, min(1, offset))
+            # new direction: sideways by the offset, always upward
+            direction = pygame.Vector2(offset * 0.8, -1)
+            self.velocity = direction.normalize() * self.speed
 
 
 async def main():
