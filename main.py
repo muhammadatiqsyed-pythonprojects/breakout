@@ -13,7 +13,7 @@ PADDLE_WIDTH = 100
 PADDLE_HEIGHT = 20
 
 # ball values
-BALL_COLOR = "pink"
+BALL_COLOR = "red"
 BALL_RADIUS = 12
 BALL_SPEED = 300  # pixels per second, in any direction
 
@@ -52,7 +52,7 @@ class Paddle:
 class Ball:
     def __init__(self, ball_color, ball_radius, ball_speed):
         self.rect = pygame.FRect(0, 0, ball_radius * 2, ball_radius * 2)
-        self.rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT // 2)
+        self.rect.center = (WINDOW_WIDTH // 2, WINDOW_HEIGHT - 150)
         # direction up and to the right, length 1, then multiplied by the speed
         self.velocity = pygame.Vector2(1, -1).normalize() * ball_speed
         self.speed = ball_speed
@@ -94,6 +94,29 @@ class Ball:
             # new direction: sideways by the offset, always upward
             direction = pygame.Vector2(offset * 0.8, -1)
             self.velocity = direction.normalize() * self.speed
+
+    def bounce_off(self, brick_rect):
+        # how deep the ball has sunk into the brick from each side
+        overlap_left = self.rect.right - brick_rect.left
+        overlap_right = brick_rect.right - self.rect.left
+        overlap_top = self.rect.bottom - brick_rect.top
+        overlap_bottom = brick_rect.bottom - self.rect.top
+
+        # the smallest overlap is the side the ball came in through
+        smallest = min(overlap_left, overlap_right, overlap_top, overlap_bottom)
+
+        if smallest == overlap_left:
+            self.rect.right = brick_rect.left
+            self.velocity.x = -abs(self.velocity.x)
+        elif smallest == overlap_right:
+            self.rect.left = brick_rect.right
+            self.velocity.x = abs(self.velocity.x)
+        elif smallest == overlap_top:
+            self.rect.bottom = brick_rect.top
+            self.velocity.y = -abs(self.velocity.y)
+        else:
+            self.rect.top = brick_rect.bottom
+            self.velocity.y = abs(self.velocity.y)
 
 
 class Brick:
@@ -148,9 +171,12 @@ async def main():
         ball.update(dt, paddle.rect)
 
         # removing bricks from the list
+        # bounce off and remove the first brick the ball touches
         for brick in brick_list[:]:  # [:] loops over a copy of the list
             if brick.rect.colliderect(ball.rect):
+                ball.bounce_off(brick.rect)
                 brick_list.remove(brick)
+                break
 
         # ---------------------------------DRAW---------------------------------------
         window.fill("white")
