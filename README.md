@@ -35,7 +35,7 @@ On Windows Git Bash use the `source` line above. On macOS or Linux use `source .
 
 ## Play online
 
-Links coming soon (itch.io and GitHub Pages).
+https://muhammadatiqsyed-pythonprojects.github.io/breakout/
 
 ## Credits
 
